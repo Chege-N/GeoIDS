@@ -1,0 +1,65 @@
+# GeoIDS Default Configuration
+# ============================================================
+
+# Conformal Geometric Algebra parameters
+geometric_algebra:
+  dim: 25           # Total dimension (p + q must equal dim)
+  p: 15             # Continuous (positive-metric) basis vectors
+  q: 10             # Categorical (negative-metric) basis vectors
+  max_grade: 3      # Maximum blade grade (1=vectors, 2=bivectors, 3=trivectors)
+  sparsity_threshold: 1.0e-6   # Prune blades with |coeff| < this
+
+# Anomaly detector settings
+detector:
+  window_size: 10000            # Normal-flow sliding window size (flows)
+  reframe_interval: 500         # Recompute reference multiframe every N normal flows
+  forgetting_factor: 0.99       # GA median forgetting factor (1.0 = no forgetting)
+  use_isolation_forest: true    # Gate normal-window updates with Isolation Forest
+  isolation_forest_contamination: 0.05
+  use_commutator_score: true    # True = blade-distance, False = Euclidean
+  explanation_threshold: 0.05   # Min blade deviation to report in explanation
+  target_fpr: 0.01              # Target false positive rate for GPD threshold
+  gpd_tail_fraction: 0.10       # Fraction of scores used for GPD tail fitting
+
+# Flow ingestion settings
+ingestion:
+  ring_buffer_size: 100000      # Ring buffer capacity (flows)
+  flow_timeout: 60.0            # PCAP: seconds before idle flow is closed
+
+# Feature extraction
+features:
+  online_normalise: true        # Use online min-max normalisation
+  dim: 25                       # Must match geometric_algebra.dim
+
+# Output writers
+# Each writer in the list is active simultaneously.
+writers:
+  - type: console
+    alerts_only: true
+
+  - type: json
+    path: alerts.json
+    alerts_only: true
+
+# Optional: SIEM output (uncomment to enable)
+# - type: siem
+#   format: splunk_hec
+#   endpoint: https://splunk:8088/services/collector
+#   token: YOUR_HEC_TOKEN
+#   batch_size: 50
+
+# Dashboard
+dashboard:
+  host: 127.0.0.1
+  port: 8050
+  refresh_interval_ms: 3000
+
+# Logging
+logging:
+  level: INFO
+  file: null    # Set to a path to enable file logging
+
+# Evaluation defaults
+evaluation:
+  train_weeks: 1
+  chunk_size: 50000

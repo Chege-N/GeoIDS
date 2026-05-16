@@ -1,0 +1,49 @@
+# GeoIDS High-Performance Configuration
+# Use this for 10/100 Gbps networks.
+# Requires: C++/Cython accelerated build or multi-process setup.
+
+geometric_algebra:
+  dim: 25
+  p: 15
+  q: 10
+  max_grade: 2          # Grade-2 only (skip trivectors) for speed
+  sparsity_threshold: 1.0e-5   # More aggressive pruning
+
+detector:
+  window_size: 1000000          # 1M flows
+  reframe_interval: 5000        # Less frequent recomputation
+  forgetting_factor: 0.999
+  use_isolation_forest: true
+  isolation_forest_contamination: 0.02
+  use_commutator_score: false   # Euclidean distance (faster)
+  explanation_threshold: 0.1
+  target_fpr: 0.005
+  gpd_tail_fraction: 0.05
+
+ingestion:
+  ring_buffer_size: 1000000
+  flow_timeout: 30.0
+
+features:
+  online_normalise: true
+  dim: 25
+
+writers:
+  - type: json
+    path: /var/log/geoIDS/alerts.json
+    alerts_only: true
+
+  - type: siem
+    format: splunk_hec
+    endpoint: https://splunk:8088/services/collector
+    token: CHANGE_ME
+    batch_size: 200
+
+dashboard:
+  host: 0.0.0.0
+  port: 8050
+  refresh_interval_ms: 1000
+
+logging:
+  level: WARNING
+  file: /var/log/geoIDS/geoIDS.log
