@@ -126,8 +126,8 @@ GeoIDS/
 ```bibtex
 @software{GeoIDS2024,
   title  = {GeoIDS: Hyperdimensional Anomaly Detection via Geometric Algebra},
-  year   = {2024},
-  url    = {https://github.com/your-org/GeoIDS}
+  year   = {2026},
+  url    = {https://github.com/Chege-N/GeoIDS}
 }
 ```
 
