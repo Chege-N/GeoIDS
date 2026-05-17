@@ -1,0 +1,174 @@
+# .github/workflows/ci.yml
+# ─────────────────────────────────────────────────────────────────────────────
+# GeoIDS CI/CD Pipeline
+#
+# Jobs
+# ────
+#   lint          — ruff + mypy
+#   test          — pytest on Python 3.10, 3.11, 3.12
+#   coverage      — pytest-cov + upload to Codecov
+#   benchmark     — throughput regression (only on main)
+#   docker-build  — build & push Docker image (only on tag)
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+    tags: ["v*.*.*"]
+  pull_request:
+    branches: [main]
+
+env:
+  PYTHON_VERSION_DEFAULT: "3.12"
+
+jobs:
+
+  # ── Lint ──────────────────────────────────────────────────────────────────
+  lint:
+    name: Lint (ruff + mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION_DEFAULT }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION_DEFAULT }}
+          cache: pip
+
+      - name: Install lint deps
+        run: |
+          pip install ruff mypy numpy scipy scikit-learn click pydantic pyyaml loguru
+
+      - name: Run ruff
+        run: ruff check geoidslib/ dashboard/ tests/
+
+      - name: Run mypy
+        run: mypy geoidslib/ --ignore-missing-imports --no-strict-optional
+        continue-on-error: true  # type hints are advisory
+
+  # ── Test Matrix ───────────────────────────────────────────────────────────
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install numpy scipy scikit-learn click pydantic pyyaml loguru orjson psutil rich
+          pip install pytest pytest-cov
+
+      - name: Run tests
+        run: |
+          PYTHONPATH=. pytest tests/ -v --tb=short \
+            --cov=geoidslib --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage
+        if: matrix.python-version == '3.12'
+        uses: codecov/codecov-action@v4
+        with:
+          file: coverage.xml
+          flags: unittests
+          name: geoIDS-coverage
+        continue-on-error: true
+
+  # ── Coverage Gate ─────────────────────────────────────────────────────────
+  coverage:
+    name: Coverage Gate (≥ 80%)
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION_DEFAULT }}
+          cache: pip
+
+      - name: Install
+        run: |
+          pip install numpy scipy scikit-learn click pydantic pyyaml loguru orjson psutil rich
+          pip install pytest pytest-cov
+
+      - name: Run with coverage
+        run: |
+          PYTHONPATH=. pytest tests/ --cov=geoidslib --cov-fail-under=80 -q
+
+  # ── Benchmark (main only) ────────────────────────────────────────────────
+  benchmark:
+    name: Throughput Benchmark
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION_DEFAULT }}
+          cache: pip
+
+      - name: Install
+        run: |
+          pip install numpy scipy scikit-learn click pydantic pyyaml loguru orjson psutil rich
+          pip install pytest pytest-benchmark
+
+      - name: Run benchmarks
+        run: |
+          PYTHONPATH=. python benchmarks/bench_throughput.py
+
+  # ── Docker Build & Push ───────────────────────────────────────────────────
+  docker:
+    name: Docker Build & Push
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [test, coverage]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version tag
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
