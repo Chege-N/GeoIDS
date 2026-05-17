@@ -64,7 +64,7 @@ PCAP / NetFlow / Zeek logs
 ### Install (CPU, Python 3.10+)
 
 ```bash
-git clone https://github.com/your-org/GeoIDS.git
+git clone https://github.com/Chege-N/GeoIDS.git
 cd GeoIDS
 pip install -e ".[dev]"
 ```
