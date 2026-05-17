@@ -1,0 +1,137 @@
+# docker-compose.yml
+# ─────────────────────────────────────────────────────────────────────────────
+# GeoIDS full stack:
+#   geoIDS    — the IDS engine (PCAP / live / Zeek)
+#   dashboard — Plotly Dash web UI
+#   elk       — Elasticsearch + Logstash + Kibana (optional SIEM)
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: "3.9"
+
+services:
+
+  # ── IDS Engine ──────────────────────────────────────────────────────────────
+  geoIDS:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: geoIDS:latest
+    container_name: geoIDS_engine
+    restart: unless-stopped
+    network_mode: host          # Required for live packet capture
+    cap_add:
+      - NET_ADMIN               # Required for raw socket / pcap
+      - NET_RAW
+    volumes:
+      - ./data:/data:ro         # PCAP / Zeek log input
+      - ./alerts:/var/log/geoIDS # Alert JSON output
+      - ./state:/app/state      # Persistent detector state
+      - ./configs:/app/configs:ro
+    environment:
+      PYTHONPATH: /app
+      GEOIDSIDS_CONFIG: /app/configs/default.yaml
+    command:
+      - ingest
+      - --source
+      - live
+      - --interface
+      - "${CAPTURE_INTERFACE:-eth0}"
+      - --config
+      - /app/configs/default.yaml
+      - --output
+      - /var/log/geoIDS/alerts.json
+      - --state-dir
+      - /app/state
+    healthcheck:
+      test: ["CMD", "python", "-c", "from geoidslib import GeoIDS; print('ok')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ── Dashboard ──────────────────────────────────────────────────────────────
+  dashboard:
+    image: geoIDS:latest
+    container_name: geoIDS_dashboard
+    restart: unless-stopped
+    ports:
+      - "8050:8050"
+    volumes:
+      - ./alerts:/var/log/geoIDS:ro
+    environment:
+      PYTHONPATH: /app
+    command:
+      - dashboard
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8050"
+      - --alerts-file
+      - /var/log/geoIDS/alerts.json
+    depends_on:
+      - geoIDS
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8050/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── Elasticsearch (optional SIEM backend) ──────────────────────────────────
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    container_name: geoIDS_elasticsearch
+    restart: unless-stopped
+    profiles: ["siem"]          # Only started with: docker compose --profile siem up
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ── Kibana ─────────────────────────────────────────────────────────────────
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.12.0
+    container_name: geoIDS_kibana
+    restart: unless-stopped
+    profiles: ["siem"]
+    ports:
+      - "5601:5601"
+    environment:
+      ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  # ── Logstash (ships GeoIDS alerts → Elasticsearch) ─────────────────────────
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.12.0
+    container_name: geoIDS_logstash
+    restart: unless-stopped
+    profiles: ["siem"]
+    volumes:
+      - ./configs/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+      - ./alerts:/var/log/geoIDS:ro
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+volumes:
+  es_data:
+    driver: local
+
+networks:
+  default:
+    name: geoIDS_net
