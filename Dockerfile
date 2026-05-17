@@ -97,4 +97,4 @@ CMD ["--help"]
 LABEL org.opencontainers.image.title="GeoIDS"
 LABEL org.opencontainers.image.description="Hyperdimensional Anomaly Detection via Geometric Algebra"
 LABEL org.opencontainers.image.licenses="MIT"
-LABEL org.opencontainers.image.source="https://github.com/your-org/GeoIDS"
+LABEL org.opencontainers.image.source="https://github.com/Chege-N/GeoIDS"
