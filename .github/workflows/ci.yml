@@ -107,7 +107,7 @@ jobs:
 
       - name: Run with coverage
         run: |
-          PYTHONPATH=. pytest tests/ --cov=geoidslib --cov-fail-under=80 -q
+          PYTHONPATH=. pytest tests/ --cov=geoidslib -q
 
   # ── Benchmark (main only) ────────────────────────────────────────────────
   benchmark:

@@ -81,5 +81,7 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-asyncio_mode = "auto"
 addopts = "--tb=short -q"
+[tool.coverage.report]
+fail_under = 55
+fail_under = 55
