@@ -16,7 +16,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: runtime
-    image: geoIDS:latest
+    image: geoids:latest
     container_name: geoIDS_engine
     restart: unless-stopped
     network_mode: host          # Required for live packet capture
