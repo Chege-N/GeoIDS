@@ -84,4 +84,3 @@ testpaths = ["tests"]
 addopts = "--tb=short -q"
 [tool.coverage.report]
 fail_under = 55
-fail_under = 55
