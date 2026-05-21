@@ -19,9 +19,7 @@ Optional C++ acceleration (for Eigen-backed operations):
   pip install pybind11
 """
 
-import os
 import sys
-from pathlib import Path
 
 from setuptools import Extension, setup
 

@@ -4,8 +4,8 @@ tests/test_ga_engine.py
 Unit tests for the GeometricAlgebraEngine.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 from geoidslib.algebra.ga_engine import GeometricAlgebraEngine
 from geoidslib.algebra.multivector import SparseMultivector

@@ -20,7 +20,6 @@ import collections
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Deque, List, Optional, Tuple
 
 import numpy as np
 from scipy.stats import genpareto
@@ -28,7 +27,6 @@ from sklearn.ensemble import IsolationForest
 
 from geoidslib.algebra.ga_engine import GeometricAlgebraEngine
 from geoidslib.algebra.multivector import SparseMultivector
-from geoidslib.features.extractor import FlowRecord
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +40,7 @@ class AnomalyResult:
     score: float
     is_anomaly: bool
     threshold: float
-    blade_explanations: List[dict] = field(default_factory=list)
+    blade_explanations: list[dict] = field(default_factory=list)
     top_blade_label: str = ""
     confidence: float = 0.0
 
@@ -98,9 +96,9 @@ class GPDThreshold:
         self.min_samples = min_samples
         self.refit_every = refit_every
 
-        self._scores: List[float] = []
+        self._scores: list[float] = []
         self._threshold: float = float("inf")
-        self._gpd_params: Optional[Tuple[float, float, float]] = None  # c, loc, scale
+        self._gpd_params: tuple[float, float, float] | None = None  # c, loc, scale
         self._since_last_fit = 0
 
     @property
@@ -181,7 +179,7 @@ class AnomalyDetector:
 
     def __init__(
         self,
-        ga_engine: Optional[GeometricAlgebraEngine] = None,
+        ga_engine: GeometricAlgebraEngine | None = None,
         window_size: int = 10_000,
         reframe_interval: int = 500,
         forgetting_factor: float = 0.99,
@@ -201,12 +199,13 @@ class AnomalyDetector:
         self.explanation_threshold = explanation_threshold
 
         # Sliding window of normal flow multivectors
-        self._normal_window: Deque[SparseMultivector] = collections.deque(maxlen=window_size)
+        self._normal_window: collections.deque[SparseMultivector] = \
+            collections.deque(maxlen=window_size)
         # Feature vectors for Isolation Forest
-        self._if_buffer: Deque[np.ndarray] = collections.deque(maxlen=window_size)
+        self._if_buffer: collections.deque[np.ndarray] = collections.deque(maxlen=window_size)
 
         # Reference multiframe (GA median of normal window)
-        self._reference_mv: Optional[SparseMultivector] = None
+        self._reference_mv: SparseMultivector | None = None
         self._flows_since_reframe = 0
 
         # Online threshold estimator
@@ -216,7 +215,7 @@ class AnomalyDetector:
         )
 
         # Isolation Forest (lazy initialisation)
-        self._iso_forest: Optional[IsolationForest] = None
+        self._iso_forest: IsolationForest | None = None
         self._iso_contamination = isolation_forest_contamination
         self._iso_refit_every = 2000
         self._iso_since_fit = 0
@@ -234,7 +233,7 @@ class AnomalyDetector:
         self,
         features: np.ndarray,
         flow_id: str = "",
-        timestamp: Optional[float] = None,
+        timestamp: float | None = None,
     ) -> AnomalyResult:
         """
         Process a single normalised feature vector and return an AnomalyResult.
@@ -266,10 +265,7 @@ class AnomalyDetector:
         is_anomaly = score > current_threshold
 
         # 5. Confidence (how far above threshold)
-        if current_threshold > 1e-12:
-            confidence = min(score / current_threshold, 5.0) / 5.0
-        else:
-            confidence = 0.0
+        confidence = min(score / current_threshold, 5.0) / 5.0 if current_threshold > 1e-12 else 0.0
 
         # 6. Update normal window (only for non-anomalous flows)
         if not is_anomaly:
@@ -309,8 +305,8 @@ class AnomalyDetector:
     def process_batch(
         self,
         features_batch: np.ndarray,
-        flow_ids: Optional[List[str]] = None,
-    ) -> List[AnomalyResult]:
+        flow_ids: list[str] | None = None,
+    ) -> list[AnomalyResult]:
         """
         Process a batch of feature vectors.
 
@@ -384,16 +380,16 @@ class AnomalyDetector:
         if len(self._if_buffer) < 100:
             return
 
-        X = np.vstack(list(self._if_buffer))
+        x_data = np.vstack(list(self._if_buffer))
         self._iso_forest = IsolationForest(
             n_estimators=100,
             contamination=self._iso_contamination,
             random_state=42,
             n_jobs=-1,
         )
-        self._iso_forest.fit(X)
+        self._iso_forest.fit(x_data)
         self._iso_since_fit = 0
-        logger.debug("Isolation Forest refitted on %d samples", len(X))
+        logger.debug("Isolation Forest refitted on %d samples", len(x_data))
 
     # ------------------------------------------------------------------
     # Statistics

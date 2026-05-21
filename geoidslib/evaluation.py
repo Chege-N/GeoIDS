@@ -17,18 +17,12 @@ with special emphasis on zero-day (unseen-attack) detection.
 from __future__ import annotations
 
 import logging
-import time
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 from sklearn.metrics import (
-    classification_report,
     confusion_matrix,
-    f1_score,
-    precision_score,
-    recall_score,
     roc_auc_score,
 )
 
@@ -132,7 +126,7 @@ class Evaluator:
         self,
         data_path: str,
         train_weeks: int = 1,
-        zero_day_attacks: Optional[List[str]] = None,
+        zero_day_attacks: list[str] | None = None,
         chunk_size: int = 50_000,
     ) -> dict:
         """
@@ -152,10 +146,7 @@ class Evaluator:
         dict  Evaluation report.
         """
         cfg = Path(self.config_path)
-        if cfg.exists():
-            ids = GeoIDS.from_config(str(cfg))
-        else:
-            ids = GeoIDS(writers=[])
+        ids = GeoIDS.from_config(str(cfg)) if cfg.exists() else GeoIDS(writers=[])
 
         # Silence alert writers for evaluation
         ids.writers = []
@@ -186,8 +177,8 @@ class Evaluator:
 
         if zero_day_attacks is None:
             zero_day_attacks = [
-                l for l in test_labels
-                if l != normal_label and l not in train_labels
+                label for label in test_labels
+                if label != normal_label and label not in train_labels
             ]
 
         logger.info("Zero-day attack types: %s", zero_day_attacks)
@@ -203,11 +194,11 @@ class Evaluator:
 
         # Evaluation pass
         logger.info("Evaluation phase…")
-        y_true: List[int] = []
-        y_pred: List[int] = []
-        y_true_zd: List[int] = []
-        y_pred_zd: List[int] = []
-        scores: List[float] = []
+        y_true: list[int] = []
+        y_pred: list[int] = []
+        y_true_zd: list[int] = []
+        y_pred_zd: list[int] = []
+        scores: list[float] = []
 
         for _, row in test_df.iterrows():
             flow = _build_flow_record(row, schema)
@@ -240,11 +231,11 @@ class Evaluator:
 
     def _compute_metrics(
         self,
-        y_true: List[int],
-        y_pred: List[int],
-        scores: List[float],
-        y_true_zd: List[int],
-        y_pred_zd: List[int],
+        y_true: list[int],
+        y_pred: list[int],
+        scores: list[float],
+        y_true_zd: list[int],
+        y_pred_zd: list[int],
     ) -> dict:
         y_t = np.array(y_true)
         y_p = np.array(y_pred)

@@ -18,10 +18,9 @@ geoIDS dashboard --port 8050 --alerts-file alerts.json
 
 from __future__ import annotations
 
+import contextlib
 import json
-import time
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -30,11 +29,12 @@ import pandas as pd
 def create_app(alerts_file: str = "alerts.json"):
     try:
         import dash
-        from dash import dcc, html, Input, Output, dash_table
+
+        #import plotly.express as px
         import plotly.graph_objects as go
-        import plotly.express as px
+        from dash import Input, Output, dash_table, dcc, html
     except ImportError:
-        raise ImportError("Dashboard requires: pip install dash plotly pandas")
+        raise ImportError("Dashboard requires: pip install dash plotly pandas") from None
 
     app = dash.Dash(
         __name__,
@@ -122,10 +122,8 @@ def create_app(alerts_file: str = "alerts.json"):
                 for line in f:
                     line = line.strip()
                     if line:
-                        try:
+                        with contextlib.suppress(json.JSONDecodeError):
                             rows.append(json.loads(line))
-                        except json.JSONDecodeError:
-                            pass
         except Exception:
             return pd.DataFrame()
         if not rows:
@@ -152,13 +150,13 @@ def create_app(alerts_file: str = "alerts.json"):
     )
     def update(n):
         df = load_alerts(alerts_file)
-        dark_layout = dict(
-            paper_bgcolor="#161b22",
-            plot_bgcolor="#0d1117",
-            font=dict(color="#c9d1d9"),
-            xaxis=dict(gridcolor="#21262d"),
-            yaxis=dict(gridcolor="#21262d"),
-        )
+        dark_layout = {
+            "paper_bgcolor": "#161b22",
+            "plot_bgcolor": "#0d1117",
+            "font": {"color": "#c9d1d9"},
+            "xaxis": {"gridcolor": "#21262d"},
+            "yaxis": {"gridcolor": "#21262d"},
+        }
 
         # -- KPI cards --
         if df.empty:
@@ -194,22 +192,23 @@ def create_app(alerts_file: str = "alerts.json"):
             fig_ts = go.Figure(layout=dark_layout)
             fig_ts.add_trace(go.Scatter(
                 x=x, y=df["score"], mode="lines", name="Score",
-                line=dict(color="#58a6ff", width=1),
+                line={"color": "#58a6ff", "width": 1},
             ))
             if "threshold" in df.columns:
                 fig_ts.add_trace(go.Scatter(
                     x=x, y=df["threshold"], mode="lines", name="Threshold",
-                    line=dict(color="#f85149", width=1.5, dash="dash"),
+                    line={"color": "#f85149", "width": 1.5, "dash": "dash"},
                 ))
             # Highlight alerts
-            alerts_df = df[df.get("is_anomaly", False) == True] if "is_anomaly" in df.columns else pd.DataFrame()
+            is_anom = df.get("is_anomaly", False)
+            alerts_df = df[is_anom] if "is_anomaly" in df.columns else pd.DataFrame()
             if not alerts_df.empty:
                 ax = alerts_df.get("datetime", alerts_df.index)
                 fig_ts.add_trace(go.Scatter(
                     x=ax, y=alerts_df["score"], mode="markers", name="Alert",
-                    marker=dict(color="#f85149", size=6, symbol="x"),
+                    marker={"color": "#f85149", "size": 6, "symbol": "x"},
                 ))
-            fig_ts.update_layout(legend=dict(bgcolor="#21262d"))
+            fig_ts.update_layout(legend={"bgcolor": "#21262d"})
 
         # -- Blade bar chart --
         if df.empty or "top_blade" not in df.columns:
@@ -247,16 +246,24 @@ def create_app(alerts_file: str = "alerts.json"):
                 go.Scatter3d(
                     x=x3, y=y3, z=z3,
                     mode="markers",
-                    marker=dict(size=3, color=colours, opacity=0.7),
+                    marker={"size": 3, "color": colours, "opacity": 0.7},
                     hovertext=df.get("flow_id", pd.Series([""] * n)).values,
                 ),
                 layout={
                     **dark_layout,
-                    "scene": dict(
-                        xaxis=dict(title="Score", gridcolor="#21262d", backgroundcolor="#0d1117"),
-                        yaxis=dict(title="Confidence", gridcolor="#21262d", backgroundcolor="#0d1117"),
-                        zaxis=dict(title="Threshold Ratio", gridcolor="#21262d", backgroundcolor="#0d1117"),
-                    ),
+                    "scene": {
+                        "xaxis": {
+                                    "title": "Score",
+                                    "gridcolor": "#21262d",
+                                    "backgroundcolor": "#0d1117"
+                                  },
+                        "yaxis": {"title": "Confidence", 
+                                   "gridcolor": "#21262d",
+                                   "backgroundcolor": "#0d1117"},
+                        "zaxis": {"title": "Threshold Ratio", 
+                                   "gridcolor": "#21262d", 
+                                   "backgroundcolor": "#0d1117"},
+                    },
                     "title": "Multivector Manifold (PCA Approximation)",
                 },
             )

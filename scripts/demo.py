@@ -24,7 +24,6 @@ Usage
 from __future__ import annotations
 
 import argparse
-import random
 import sys
 import time
 from pathlib import Path
@@ -38,8 +37,6 @@ from geoidslib import GeoIDS
 from geoidslib.algebra.ga_engine import GeometricAlgebraEngine
 from geoidslib.detection.detector import AnomalyDetector
 from geoidslib.features.extractor import FeatureExtractor, FlowRecord
-from geoidslib.output.alert_writer import ConsoleWriter
-
 
 # ─── Synthetic flow generators ────────────────────────────────────────────────
 
@@ -243,7 +240,10 @@ def run_demo(n_flows: int = 1500, attack_rate: float = 0.12, seed: int = 42):
     for i in range(n_train):
         ids.process_flow_record(normal_flow(rng, t + i * 0.01))
     ids.anomaly_detector.force_recompute_reference()
-    print(f"   ✓ Reference multiframe established ({len(ids.anomaly_detector._reference_mv.blades)} active blades)")
+    print(
+        f"   ✓ Reference multiframe established "
+        f"({len(ids.anomaly_detector._reference_mv.blades)} active blades)"
+    )
 
     # Stats tracking
     stats: dict[str, dict] = {
@@ -340,8 +340,8 @@ def run_demo(n_flows: int = 1500, attack_rate: float = 0.12, seed: int = 42):
         print(f"  {label:<18} {total:>7} {detected:>9} {col}{dr_str:>7}{rst}  {kind}")
 
     # Overall metrics
-    total_attacks = sum(stats[l]["total"] for l in all_attack_labels)
-    total_detected = sum(stats[l]["detected"] for l in all_attack_labels)
+    total_attacks = sum(stats[label]["total"] for label in all_attack_labels)
+    total_detected = sum(stats[label]["detected"] for label in all_attack_labels)
     zd_total = stats["DoH-Backdoor"]["total"]
     zd_detected = stats["DoH-Backdoor"]["detected"]
     benign_total = stats["BENIGN"]["total"]
@@ -357,7 +357,10 @@ def run_demo(n_flows: int = 1500, attack_rate: float = 0.12, seed: int = 42):
     print("  " + "─" * 60)
     print(f"\n  Overall Detection Rate  : {overall_dr:.1%}")
     print(f"  Zero-Day Detection Rate : {zd_dr:.1%}  {'✓' if zd_dr > 0.85 else '✗'} (target > 85%)")
-    print(f"  False Positive Rate     : {overall_fpr:.2%}  {'✓' if overall_fpr < 0.01 else '~'} (target < 1%)")
+    print(
+        f"  False Positive Rate     : {overall_fpr:.2%} "
+        f"{'✓' if overall_fpr < 0.01 else '~'} (target < 1%)"
+    )
     print(f"  F1-Score                : {f1:.4f}")
     print(f"\n  Detector stats: {ids.stats}")
     print("\n" + "═" * 68 + "\n")

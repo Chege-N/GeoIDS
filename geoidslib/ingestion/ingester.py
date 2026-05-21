@@ -19,16 +19,13 @@ For production use, replace with a multiprocessing.Queue or mmap ring.
 
 from __future__ import annotations
 
-import csv
 import json
 import logging
 import os
-import time
 from abc import ABC, abstractmethod
 from collections import deque
-from dataclasses import dataclass
+from collections.abc import Callable, Generator, Iterator
 from pathlib import Path
-from typing import Callable, Deque, Generator, Iterator, Optional
 
 from geoidslib.features.extractor import FlowRecord
 
@@ -43,7 +40,7 @@ class BaseIngester(ABC):
     """Abstract base class for all ingesters."""
 
     def __init__(self, ring_buffer_size: int = 100_000):
-        self._buffer: Deque[FlowRecord] = deque(maxlen=ring_buffer_size)
+        self._buffer: deque[FlowRecord] = deque(maxlen=ring_buffer_size)
         self._total_flows: int = 0
         self._running: bool = False
 
@@ -93,7 +90,7 @@ class PcapIngester(BaseIngester):
     def __init__(
         self,
         flow_timeout: float = 60.0,
-        max_packets: Optional[int] = None,
+        max_packets: int | None = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -110,8 +107,8 @@ class PcapIngester(BaseIngester):
         """
         try:
             import dpkt
-        except ImportError:
-            raise ImportError("dpkt is required for PCAP ingestion: pip install dpkt")
+        except ImportError as err:
+            raise ImportError("dpkt is required for PCAP ingestion: pip install dpkt") from err
 
         path = str(path)
         if not os.path.exists(path):
@@ -211,7 +208,10 @@ class PcapIngester(BaseIngester):
             yield flow
             self._total_flows += 1
 
-        logger.info("PCAP ingestion complete: %d packets, %d flows", packets_read, self._total_flows)
+        logger.info(
+            "PCAP ingestion complete: %d packets, %d flows", 
+            packets_read, self._total_flows
+        )
 
 
 def _ip_to_str(ip_bytes: bytes) -> str:
@@ -261,8 +261,8 @@ class NetFlowIngester(BaseIngester):
         """
         try:
             from nfstream import NFStreamer
-        except ImportError:
-            raise ImportError("nfstream is required: pip install nfstream")
+        except ImportError as err:
+            raise ImportError("nfstream is required: pip install nfstream") from err
 
         streamer = NFStreamer(
             source=source,
@@ -348,7 +348,7 @@ class ZeekIngester(BaseIngester):
                     parts = line.split(separator)
                     if len(parts) != len(fields):
                         continue
-                    row = dict(zip(fields, parts))
+                    row = dict(zip(fields, parts, strict=False))
                     rec = self._parse_conn_row(row)
                     if rec:
                         self._total_flows += 1
@@ -366,7 +366,7 @@ class ZeekIngester(BaseIngester):
                 except json.JSONDecodeError:
                     continue
 
-    def _parse_conn_row(self, row: dict) -> Optional[FlowRecord]:
+    def _parse_conn_row(self, row: dict) -> FlowRecord | None:
         def _float(k: str, default: float = 0.0) -> float:
             try:
                 return float(row.get(k, default))
@@ -426,9 +426,9 @@ class FlowIngester:
     def ingest(
         self,
         source: str,
-        file: Optional[str] = None,
-        interface: Optional[str] = None,
-        callback: Optional[Callable[[FlowRecord], None]] = None,
+        file: str | None = None,
+        interface: str | None = None,
+        callback: Callable[[FlowRecord], None] | None = None,
         **kwargs,
     ) -> Generator[FlowRecord, None, None]:
         """

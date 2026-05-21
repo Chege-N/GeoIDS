@@ -5,14 +5,13 @@ Unit tests for the AnomalyDetector, GPDThreshold, and AnomalyResult.
 """
 
 import math
-import pickle
 import time
-import pytest
+
 import numpy as np
+import pytest
 
-from geoidslib.detection.detector import AnomalyDetector, AnomalyResult, GPDThreshold
 from geoidslib.algebra.ga_engine import GeometricAlgebraEngine
-
+from geoidslib.detection.detector import AnomalyDetector, AnomalyResult, GPDThreshold
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -180,7 +179,7 @@ class TestAnomalyDetector:
         )
         # Feed normal flows (values ~0.5)
         rng = np.random.default_rng(42)
-        for i in range(100):
+        for _i in range(100):
             feat = rng.uniform(0.4, 0.6, size=6)
             det.process_flow(feat)
         det.force_recompute_reference()
@@ -261,7 +260,7 @@ class TestIsolationForestGate:
         )
         rng = np.random.default_rng(20)
         results = []
-        for i in range(50):
+        for _i in range(50):
             feat = rng.uniform(0, 1, size=6)
             results.append(det.process_flow(feat))
         assert len(results) == 50

@@ -15,10 +15,8 @@ import asyncio
 import json
 import logging
 import sys
-import time
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import List, Optional
 
 from geoidslib.detection.detector import AnomalyResult
 
@@ -33,12 +31,13 @@ class BaseWriter(ABC):
     @abstractmethod
     def write(self, result: AnomalyResult) -> None: ...
 
-    def write_batch(self, results: List[AnomalyResult]) -> None:
+    def write_batch(self, results: list[AnomalyResult]) -> None:
         for r in results:
             self.write(r)
 
+    @abstractmethod
     def close(self) -> None:
-        pass
+        ...
 
 
 # ---------------------------------------------------------------------------
@@ -84,7 +83,7 @@ class ConsoleWriter(BaseWriter):
         self.verbose = verbose
         try:
             from rich.console import Console
-            from rich.table import Table
+            #from rich.table import Table
             self._rich_console = Console()
             self._use_rich = True
         except ImportError:
@@ -100,8 +99,6 @@ class ConsoleWriter(BaseWriter):
             self._write_plain(result)
 
     def _write_rich(self, result: AnomalyResult) -> None:
-        from rich.panel import Panel
-        from rich import print as rprint
 
         colour = "bold red" if result.is_anomaly else "green"
         label = "🚨 ALERT" if result.is_anomaly else "✅ NORMAL"
@@ -158,7 +155,7 @@ class SIEMWriter(BaseWriter):
         self.format = format
         self.batch_size = batch_size
         self.timeout_s = timeout_s
-        self._pending: List[AnomalyResult] = []
+        self._pending: list[AnomalyResult] = []
 
     def write(self, result: AnomalyResult) -> None:
         if not result.is_anomaly:
@@ -178,7 +175,10 @@ class SIEMWriter(BaseWriter):
                 data=payload.encode(),
                 headers={
                     "Content-Type": "application/json",
-                    "Authorization": f"Splunk {self.token}" if self.format == "splunk_hec" else f"Bearer {self.token}",
+                    "Authorization": (
+                        f"Splunk {self.token}" if self.format == "splunk_hec" 
+                        else f"Bearer {self.token}",
+                     )
                 },
                 method="POST",
             )
@@ -189,7 +189,7 @@ class SIEMWriter(BaseWriter):
         finally:
             self._pending.clear()
 
-    def _format_batch(self, results: List[AnomalyResult]) -> str:
+    def _format_batch(self, results: list[AnomalyResult]) -> str:
         if self.format == "splunk_hec":
             events = [
                 {"time": r.timestamp, "event": r.to_dict(), "sourcetype": "geoIDS_alert"}
@@ -234,15 +234,15 @@ class WebSocketWriter(BaseWriter):
         self.host = host
         self.port = port
         self._clients: set = set()
-        self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._loop: asyncio.AbstractEventLoop | None = None
         self._server = None
         self._queue: asyncio.Queue = asyncio.Queue(maxsize=10_000)
 
     async def start_server(self) -> None:
         try:
             import websockets
-        except ImportError:
-            raise ImportError("websockets is required: pip install websockets")
+        except ImportError as err:
+            raise ImportError("websockets is required: pip install websockets") from err
 
         self._loop = asyncio.get_event_loop()
 

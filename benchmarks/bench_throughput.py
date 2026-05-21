@@ -17,7 +17,6 @@ pytest benchmarks/bench_throughput.py --benchmark-sort=mean
 """
 
 import time
-from typing import List
 
 import numpy as np
 import pytest
@@ -26,12 +25,11 @@ from geoidslib.algebra.ga_engine import GeometricAlgebraEngine
 from geoidslib.detection.detector import AnomalyDetector
 from geoidslib.features.extractor import FeatureExtractor, FlowRecord
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-def make_flows(n: int, seed: int = 0) -> List[FlowRecord]:
+def make_flows(n: int, seed: int = 0) -> list[FlowRecord]:
     rng = np.random.default_rng(seed)
     flows = []
     for _ in range(n):
@@ -74,33 +72,37 @@ def bench(name: str, fn, n_runs: int = 3, n_items: int = 10_000):
 
 
 def run_benchmarks():
-    N = 10_000
+    n_flows = 10_000
     print(f"\n{'='*65}")
-    print(f"  GeoIDS Throughput Benchmark  (N={N:,} flows)")
+    print(f"  GeoIDS Throughput Benchmark  (n_flows={n_flows:,} flows)")
     print(f"{'='*65}")
 
     # --- Feature extraction ---
-    flows = make_flows(N)
+    flows = make_flows(n_flows)
     extractor = FeatureExtractor(online_normalise=False)
-    bench("FeatureExtractor.extract_raw", lambda: [extractor.extract_raw(f) for f in flows], n_items=N)
+    bench("FeatureExtractor.extract_raw",
+          lambda: [extractor.extract_raw(f) for f in flows],
+          n_items=n_flows)
 
     extractor_norm = FeatureExtractor(online_normalise=True)
-    bench("FeatureExtractor.extract (normalised)", lambda: [extractor_norm.extract(f) for f in flows], n_items=N)
+    bench("FeatureExtractor.extract (normalised)",
+          lambda: [extractor_norm.extract(f) for f in flows],
+          n_items=n_flows)
 
     # --- GA embedding ---
     engine = GeometricAlgebraEngine(dim=25, p=15, q=10, max_grade=2)
-    feat_matrix = make_feature_matrix(N)
+    feat_matrix = make_feature_matrix(n_flows)
     bench(
         "GAEngine.embed (grade ≤ 2)",
-        lambda: [engine.embed(feat_matrix[i]) for i in range(N)],
-        n_items=N,
+        lambda: [engine.embed(feat_matrix[i]) for i in range(n_flows)],
+        n_items=n_flows,
     )
 
     engine3 = GeometricAlgebraEngine(dim=25, p=15, q=10, max_grade=3)
     bench(
         "GAEngine.embed (grade ≤ 3)",
-        lambda: [engine3.embed(feat_matrix[i]) for i in range(N)],
-        n_items=N,
+        lambda: [engine3.embed(feat_matrix[i]) for i in range(n_flows)],
+        n_items=n_flows,
     )
 
     # --- Anomaly scoring ---
@@ -118,13 +120,13 @@ def run_benchmarks():
 
     bench(
         "AnomalyDetector.process_flow",
-        lambda: [det.process_flow(feat_matrix[i % N]) for i in range(N)],
-        n_items=N,
+        lambda: [det.process_flow(feat_matrix[i % n_flows]) for i in range(n_flows)],
+        n_items=n_flows,
     )
 
     # --- Batch processing ---
     bench(
-        "AnomalyDetector.process_batch (N=1000)",
+        "AnomalyDetector.process_batch (n_flows=1000)",
         lambda: det.process_batch(feat_matrix[:1000]),
         n_runs=5,
         n_items=1000,
@@ -135,17 +137,17 @@ def run_benchmarks():
     ref_mv = mv_list[0]
     bench(
         "SparseMultivector.geometric_product",
-        lambda: [mv_list[i % 100].geometric_product(ref_mv) for i in range(N)],
-        n_items=N,
+        lambda: [mv_list[i % 100].geometric_product(ref_mv) for i in range(n_flows)],
+        n_items=n_flows,
     )
 
     bench(
         "SparseMultivector.commutator",
-        lambda: [mv_list[i % 100].commutator(ref_mv) for i in range(N)],
-        n_items=N,
+        lambda: [mv_list[i % 100].commutator(ref_mv) for i in range(n_flows)],
+        n_items=n_flows,
     )
 
-    print(f"\n  Target: 100,000 flows/s (with Cython/C++ acceleration)")
+    print("\n  Target: 100,000 flows/s (with Cython/C++ acceleration)")
     print(f"{'='*65}\n")
 
 

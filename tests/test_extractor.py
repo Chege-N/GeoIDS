@@ -4,24 +4,23 @@ tests/test_extractor.py
 Unit tests for the FeatureExtractor and FlowRecord.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 from geoidslib.features.extractor import (
+    NUM_FEATURES,
     FeatureExtractor,
     FlowRecord,
     OnlineNormaliser,
-    NUM_FEATURES,
-    _shannon_entropy,
-    _packet_size_entropy,
+    _dst_ip_class,
     _iat_entropy,
     _ip_entropy,
-    _dst_ip_class,
+    _packet_size_entropy,
     _port_category,
-    _tls_version_norm,
     _protocol_norm,
+    _shannon_entropy,
+    _tls_version_norm,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helper / utility function tests

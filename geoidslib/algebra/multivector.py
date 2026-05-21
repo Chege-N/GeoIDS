@@ -26,12 +26,11 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Dict, FrozenSet, Iterable, Tuple
 
 import numpy as np
 
 # Type alias: a blade key is a sorted tuple of basis-vector indices
-BladeKey = Tuple[int, ...]
+BladeKey = tuple[int, ...]
 
 
 def _blade_key(*indices: int) -> BladeKey:
@@ -61,7 +60,7 @@ class SparseMultivector:
 
     dim: int
     metric: np.ndarray
-    blades: Dict[BladeKey, float] = field(default_factory=dict)
+    blades: dict[BladeKey, float] = field(default_factory=dict)
     sparsity_threshold: float = 1e-9
     max_grade: int = 3
 
@@ -76,7 +75,7 @@ class SparseMultivector:
         metric: np.ndarray | None = None,
         sparsity_threshold: float = 1e-9,
         max_grade: int = 3,
-    ) -> "SparseMultivector":
+    ) -> SparseMultivector:
         """
         Embed a real feature vector as a grade-1 multivector (pure vector part).
 
@@ -95,7 +94,7 @@ class SparseMultivector:
         return mv
 
     @classmethod
-    def scalar(cls, value: float, dim: int, metric: np.ndarray | None = None) -> "SparseMultivector":
+    def scalar(cls, value: float, dim: int, metric: np.ndarray | None = None) -> SparseMultivector:
         """Create a scalar (grade-0) multivector."""
         if metric is None:
             metric = np.ones(dim)
@@ -108,7 +107,7 @@ class SparseMultivector:
     # Grade extraction
     # ------------------------------------------------------------------
 
-    def grade_part(self, k: int) -> "SparseMultivector":
+    def grade_part(self, k: int) -> SparseMultivector:
         """Return the grade-k part of this multivector."""
         mv = SparseMultivector(
             dim=self.dim,
@@ -138,7 +137,7 @@ class SparseMultivector:
     # Arithmetic
     # ------------------------------------------------------------------
 
-    def __add__(self, other: "SparseMultivector") -> "SparseMultivector":
+    def __add__(self, other: SparseMultivector) -> SparseMultivector:
         result = SparseMultivector(
             dim=self.dim,
             metric=self.metric.copy(),
@@ -151,10 +150,10 @@ class SparseMultivector:
         result._prune()
         return result
 
-    def __sub__(self, other: "SparseMultivector") -> "SparseMultivector":
+    def __sub__(self, other: SparseMultivector) -> SparseMultivector:
         return self.__add__(other.__neg__())
 
-    def __neg__(self) -> "SparseMultivector":
+    def __neg__(self) -> SparseMultivector:
         mv = SparseMultivector(
             dim=self.dim,
             metric=self.metric.copy(),
@@ -164,7 +163,7 @@ class SparseMultivector:
         mv.blades = {k: -v for k, v in self.blades.items()}
         return mv
 
-    def __mul__(self, scalar: float) -> "SparseMultivector":
+    def __mul__(self, scalar: float) -> SparseMultivector:
         """Scalar multiplication."""
         mv = SparseMultivector(
             dim=self.dim,
@@ -176,17 +175,17 @@ class SparseMultivector:
         mv._prune()
         return mv
 
-    def __rmul__(self, scalar: float) -> "SparseMultivector":
+    def __rmul__(self, scalar: float) -> SparseMultivector:
         return self.__mul__(scalar)
 
-    def __truediv__(self, scalar: float) -> "SparseMultivector":
+    def __truediv__(self, scalar: float) -> SparseMultivector:
         return self.__mul__(1.0 / scalar)
 
     # ------------------------------------------------------------------
     # Geometric product (sparse implementation)
     # ------------------------------------------------------------------
 
-    def geometric_product(self, other: "SparseMultivector") -> "SparseMultivector":
+    def geometric_product(self, other: SparseMultivector) -> SparseMultivector:
         """
         Compute the geometric product A * B using the metric-aware Clifford rule:
             e_i * e_i = metric[i]
@@ -214,7 +213,7 @@ class SparseMultivector:
         result._prune()
         return result
 
-    def outer_product(self, other: "SparseMultivector") -> "SparseMultivector":
+    def outer_product(self, other: SparseMultivector) -> SparseMultivector:
         """
         Wedge (outer) product: A ∧ B.
         Only grade-(|A|+|B|) terms survive.
@@ -241,7 +240,7 @@ class SparseMultivector:
         result._prune()
         return result
 
-    def inner_product(self, other: "SparseMultivector") -> "SparseMultivector":
+    def inner_product(self, other: SparseMultivector) -> SparseMultivector:
         """Left contraction (inner product) A ⌋ B."""
         result = SparseMultivector(
             dim=self.dim,
@@ -265,13 +264,13 @@ class SparseMultivector:
         result._prune()
         return result
 
-    def commutator(self, other: "SparseMultivector") -> "SparseMultivector":
+    def commutator(self, other: SparseMultivector) -> SparseMultivector:
         """Commutator product [A, B] = (AB - BA) / 2."""
         ab = self.geometric_product(other)
         ba = other.geometric_product(self)
         return (ab - ba) * 0.5
 
-    def reverse(self) -> "SparseMultivector":
+    def reverse(self) -> SparseMultivector:
         """Reverse of A: reverses order of each basis blade."""
         mv = SparseMultivector(
             dim=self.dim,
@@ -289,7 +288,7 @@ class SparseMultivector:
     # Norms and distances
     # ------------------------------------------------------------------
 
-    def scalar_product(self, other: "SparseMultivector") -> float:
+    def scalar_product(self, other: SparseMultivector) -> float:
         """
         Scalar product ⟨A, B⟩ = ⟨A B̃⟩₀
         where B̃ is the reverse of B.
@@ -303,7 +302,7 @@ class SparseMultivector:
         ns = self.norm_squared()
         return math.sqrt(abs(ns))
 
-    def blade_distance(self, other: "SparseMultivector") -> float:
+    def blade_distance(self, other: SparseMultivector) -> float:
         """
         Blade-based anomaly distance between two multivectors.
         Uses the norm of the commutator: ‖[A, B]‖ / (‖A‖ · ‖B‖)
@@ -316,7 +315,7 @@ class SparseMultivector:
             return 0.0
         return comm_norm / denom
 
-    def euclidean_distance(self, other: "SparseMultivector") -> float:
+    def euclidean_distance(self, other: SparseMultivector) -> float:
         """L2 distance on blade coefficients (as sparse vectors)."""
         keys = set(self.blades) | set(other.blades)
         total = 0.0
@@ -336,7 +335,7 @@ class SparseMultivector:
 
     def anomalous_blades(
         self,
-        reference: "SparseMultivector",
+        reference: SparseMultivector,
         threshold: float,
     ) -> list[tuple[BladeKey, float]]:
         """
@@ -364,7 +363,7 @@ class SparseMultivector:
         }
 
     @classmethod
-    def from_dict(cls, d: dict) -> "SparseMultivector":
+    def from_dict(cls, d: dict) -> SparseMultivector:
         import ast
 
         mv = cls(
@@ -447,7 +446,7 @@ def _count_swaps(key_a: BladeKey, key_b: BladeKey) -> float:
     Returns the sign (+1 or -1) for the outer product.
     """
     count = 0
-    for i, a in enumerate(reversed(key_a)):
+    for _i, a in enumerate(reversed(key_a)):
         for b in key_b:
             if a > b:
                 count += 1

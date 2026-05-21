@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import logging
 import sys
-import time
 from pathlib import Path
 
 import click
@@ -60,15 +59,13 @@ def main(log_level: str, log_file: str | None):
 def ingest(source, input_file, interface, config, output, max_flows, state_dir, quiet):
     """Run the GeoIDS anomaly detection pipeline."""
     from geoidslib.core import GeoIDS
-    from geoidslib.output.alert_writer import JSONFileWriter, ConsoleWriter
+    from geoidslib.output.alert_writer import ConsoleWriter, JSONFileWriter
 
     cfg_path = Path(config)
     if cfg_path.exists():
         ids = GeoIDS.from_config(str(cfg_path))
     else:
         click.echo(f"Config {config} not found, using defaults.", err=True)
-        from geoidslib.algebra.ga_engine import GeometricAlgebraEngine
-        from geoidslib.detection.detector import AnomalyDetector
         ids = GeoIDS(writers=[JSONFileWriter(output)])
 
     # Add JSON output
@@ -165,7 +162,9 @@ def eval(dataset, data_path, config, train_weeks, output_report):
 def info():
     """Display GeoIDS version and system information."""
     import platform
+
     import psutil
+
     from geoidslib import __version__
 
     click.echo(f"GeoIDS version : {__version__}")

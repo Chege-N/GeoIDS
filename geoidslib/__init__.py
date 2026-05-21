@@ -9,19 +9,19 @@ Public API surface:
     FlowIngester
 """
 
-from importlib.metadata import version, PackageNotFoundError
+from importlib.metadata import PackageNotFoundError, version
 
 try:
     __version__ = version("geoIDS")
 except PackageNotFoundError:
     __version__ = "0.1.0-dev"
 
-from geoidslib.algebra.multivector import SparseMultivector
 from geoidslib.algebra.ga_engine import GeometricAlgebraEngine
-from geoidslib.features.extractor import FeatureExtractor
-from geoidslib.detection.detector import AnomalyDetector
-from geoidslib.ingestion.ingester import FlowIngester
+from geoidslib.algebra.multivector import SparseMultivector
 from geoidslib.core import GeoIDS
+from geoidslib.detection.detector import AnomalyDetector
+from geoidslib.features.extractor import FeatureExtractor
+from geoidslib.ingestion.ingester import FlowIngester
 
 __all__ = [
     "__version__",

@@ -1,6 +1,6 @@
 from geoidslib.output.alert_writer import (
-    JSONFileWriter,
     ConsoleWriter,
+    JSONFileWriter,
     SIEMWriter,
     WebSocketWriter,
 )

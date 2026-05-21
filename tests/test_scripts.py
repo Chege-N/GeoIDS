@@ -151,7 +151,7 @@ class TestDatasetGenerator:
         out = str(tmp_path / "eval_test.csv")
         gen.generate(n_flows=300, attack_rate=0.2, output=out, seed=5)
 
-        from geoidslib.evaluation import Evaluator, _build_flow_record, DATASET_SCHEMAS
+        from geoidslib.evaluation import DATASET_SCHEMAS, _build_flow_record
         schema = DATASET_SCHEMAS["cic2017"]
         df = pd.read_csv(out)
 

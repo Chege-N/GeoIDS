@@ -17,10 +17,8 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator, List, Optional
-
-import numpy as np
 
 from geoidslib.algebra.ga_engine import GeometricAlgebraEngine
 from geoidslib.detection.detector import AnomalyDetector, AnomalyResult
@@ -46,17 +44,17 @@ class GeoIDS:
 
     def __init__(
         self,
-        ga_engine: Optional[GeometricAlgebraEngine] = None,
-        feature_extractor: Optional[FeatureExtractor] = None,
-        anomaly_detector: Optional[AnomalyDetector] = None,
-        flow_ingester: Optional[FlowIngester] = None,
-        writers: Optional[List[BaseWriter]] = None,
+        ga_engine: GeometricAlgebraEngine | None = None,
+        feature_extractor: FeatureExtractor | None = None,
+        anomaly_detector: AnomalyDetector | None = None,
+        flow_ingester: FlowIngester | None = None,
+        writers: list[BaseWriter] | None = None,
     ):
         self.ga_engine = ga_engine or GeometricAlgebraEngine()
         self.feature_extractor = feature_extractor or FeatureExtractor()
         self.anomaly_detector = anomaly_detector or AnomalyDetector(ga_engine=self.ga_engine)
         self.flow_ingester = flow_ingester or FlowIngester()
-        self.writers: List[BaseWriter] = writers or [ConsoleWriter()]
+        self.writers: list[BaseWriter] = writers or [ConsoleWriter()]
 
         self._total_flows = 0
         self._start_time = time.time()
@@ -66,7 +64,7 @@ class GeoIDS:
     # ------------------------------------------------------------------
 
     @classmethod
-    def from_config(cls, config_path: str) -> "GeoIDS":
+    def from_config(cls, config_path: str) -> GeoIDS:
         """
         Build a GeoIDS instance from a YAML configuration file.
 
@@ -97,7 +95,7 @@ class GeoIDS:
             target_fpr=det_cfg.get("target_fpr", 0.01),
         )
 
-        writers: List[BaseWriter] = []
+        writers: list[BaseWriter] = []
         for w_cfg in cfg.get("writers", [{"type": "console"}]):
             w_type = w_cfg.get("type", "console")
             if w_type == "console":
@@ -124,9 +122,9 @@ class GeoIDS:
     def run(
         self,
         source: str,
-        file: Optional[str] = None,
-        interface: Optional[str] = None,
-        max_flows: Optional[int] = None,
+        file: str | None = None,
+        interface: str | None = None,
+        max_flows: int | None = None,
         **kwargs,
     ) -> Generator[AnomalyResult, None, None]:
         """
@@ -142,7 +140,9 @@ class GeoIDS:
         logger.info("GeoIDS starting: source=%s file=%s interface=%s", source, file, interface)
         self._start_time = time.time()
 
-        for flow in self.flow_ingester.ingest(source=source, file=file, interface=interface, **kwargs):
+        for flow in self.flow_ingester.ingest(
+            source=source, file=file, interface=interface, **kwargs
+        ):
             features = self.feature_extractor.extract(flow)
             flow_id = f"{flow.src_ip}:{flow.src_port}-{flow.dst_ip}:{flow.dst_port}/{flow.protocol}"
             result = self.anomaly_detector.process_flow(features, flow_id=flow_id)

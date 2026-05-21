@@ -5,11 +5,11 @@ Unit tests for the SparseMultivector implementation.
 """
 
 import math
-import pytest
+
 import numpy as np
+import pytest
 
-from geoidslib.algebra.multivector import SparseMultivector, _blade_key, _clifford_product
-
+from geoidslib.algebra.multivector import SparseMultivector
 
 # ---------------------------------------------------------------------------
 # Fixtures

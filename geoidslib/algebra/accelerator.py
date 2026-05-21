@@ -39,10 +39,10 @@ def _try_load_cython() -> bool:
 
         # ── Patch SparseMultivector hot paths ──────────────────────────
 
-        original_gp = mv_module.SparseMultivector.geometric_product
-        original_op = mv_module.SparseMultivector.outer_product
-        original_ed = mv_module.SparseMultivector.euclidean_distance
-        original_bd = mv_module.SparseMultivector.blade_distance
+        #original_gp = mv_module.SparseMultivector.geometric_product
+        #original_op = mv_module.SparseMultivector.outer_product
+        #original_ed = mv_module.SparseMultivector.euclidean_distance
+        #original_bd = mv_module.SparseMultivector.blade_distance
 
         def _cy_geometric_product(self, other):
             result_blades = ga_ops_cy.cy_geometric_product(
@@ -86,10 +86,11 @@ def _try_load_cython() -> bool:
 
         # ── Patch GeometricAlgebraEngine batch embed ───────────────────
 
-        from geoidslib.algebra import ga_engine as eng_module
         import numpy as np
 
-        original_embed = eng_module.GeometricAlgebraEngine.embed
+        from geoidslib.algebra import ga_engine as eng_module
+
+        #original_embed = eng_module.GeometricAlgebraEngine.embed
 
         def _cy_embed(self, features, include_bivectors=True, include_trivectors=True):
             assert len(features) == self.dim
@@ -145,14 +146,9 @@ def force_python_fallback() -> None:
     if not _USING_CYTHON:
         return
 
-    from geoidslib.algebra import multivector as mv_module
-    from geoidslib.algebra.multivector import (
-        SparseMultivector as _SV,
-    )
-
     # Reload the original methods from a fresh class definition
-    import importlib
-    mod = importlib.reload(mv_module)
+
+    #mod = importlib.reload(mv_module)
 
     _USING_CYTHON = False
     _STATUS = "Pure Python (forced)"

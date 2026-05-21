@@ -40,10 +40,7 @@ All features are min-max normalised to [0, 1] using online statistics.
 from __future__ import annotations
 
 import math
-import struct
-import hashlib
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
 
 import numpy as np
 
@@ -67,8 +64,8 @@ class FlowRecord:
     # Packet-level statistics
     packet_count: int = 0
     byte_count: int = 0
-    packet_sizes: List[int] = field(default_factory=list)
-    inter_arrival_times: List[float] = field(default_factory=list)
+    packet_sizes: list[int] = field(default_factory=list)
+    inter_arrival_times: list[float] = field(default_factory=list)
     flow_start: float = 0.0
     flow_end: float = 0.0
 
@@ -93,7 +90,7 @@ class FlowRecord:
     tls_cert_lifetime_days: int = 0
 
     # Ground truth (for evaluation only)
-    label: Optional[str] = None
+    label: str | None = None
 
 
 class OnlineNormaliser:
@@ -132,7 +129,7 @@ class OnlineNormaliser:
         self._n = 0
 
 
-def _shannon_entropy(values: List[float]) -> float:
+def _shannon_entropy(values: list[float]) -> float:
     """Compute normalised Shannon entropy of a list of values."""
     if not values:
         return 0.0
@@ -145,17 +142,17 @@ def _shannon_entropy(values: List[float]) -> float:
     return float(ent / math.log2(len(values) + 1))  # normalise to [0,1]
 
 
-def _packet_size_entropy(sizes: List[int]) -> float:
+def _packet_size_entropy(sizes: list[int]) -> float:
     """Entropy of packet-size distribution."""
     if not sizes:
         return 0.0
-    counts: Dict[int, int] = {}
+    counts: dict[int, int] = {}
     for s in sizes:
         counts[s] = counts.get(s, 0) + 1
     return _shannon_entropy(list(counts.values()))
 
 
-def _iat_entropy(iats: List[float]) -> float:
+def _iat_entropy(iats: list[float]) -> float:
     """Entropy of discretised inter-arrival time distribution."""
     if not iats:
         return 0.0
@@ -226,7 +223,7 @@ class FeatureExtractor:
     def __init__(
         self,
         online_normalise: bool = True,
-        normaliser: Optional[OnlineNormaliser] = None,
+        normaliser: OnlineNormaliser | None = None,
     ):
         self.online_normalise = online_normalise
         self.normaliser = normaliser or OnlineNormaliser(NUM_FEATURES)
@@ -242,7 +239,7 @@ class FeatureExtractor:
         ]
 
     @property
-    def feature_names(self) -> List[str]:
+    def feature_names(self) -> list[str]:
         return self._feature_names
 
     def extract_raw(self, flow: FlowRecord) -> np.ndarray:
@@ -318,7 +315,7 @@ class FeatureExtractor:
             return self.normaliser.fit_transform(raw)
         return raw
 
-    def extract_batch(self, flows: List[FlowRecord]) -> np.ndarray:
+    def extract_batch(self, flows: list[FlowRecord]) -> np.ndarray:
         """
         Extract features from a list of flows.
 

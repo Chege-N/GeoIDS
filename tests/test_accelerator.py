@@ -9,6 +9,7 @@ status correctly, and force_python_fallback() should work.
 """
 
 import pytest
+
 from geoidslib.algebra import accelerator
 
 
@@ -39,6 +40,7 @@ class TestAcceleratorLoader:
         """Core GA operations must work after forcing Python fallback."""
         accelerator.force_python_fallback()
         import numpy as np
+
         from geoidslib.algebra.ga_engine import GeometricAlgebraEngine
 
         engine = GeometricAlgebraEngine(dim=6, p=4, q=2, max_grade=2)

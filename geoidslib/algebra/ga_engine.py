@@ -15,12 +15,11 @@ Responsibilities
 from __future__ import annotations
 
 import logging
-from typing import Dict, List, Optional, Sequence, Tuple
+from collections.abc import Sequence
 
 import numpy as np
-from numpy.linalg import norm as np_norm
 
-from geoidslib.algebra.multivector import SparseMultivector, _blade_key
+from geoidslib.algebra.multivector import SparseMultivector
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +27,7 @@ logger = logging.getLogger(__name__)
 # Maps blade key → human-readable description
 # Indices 0-14: continuous features
 # Indices 15-24: categorical / TLS features
-_DEFAULT_BLADE_DICT: Dict[tuple, str] = {
+_DEFAULT_BLADE_DICT: dict[tuple, str] = {
     # Grade-1 blades (raw features)
     (0,): "packet_count",
     (1,): "byte_count",
@@ -103,7 +102,7 @@ class GeometricAlgebraEngine:
         q: int = 10,
         max_grade: int = 3,
         sparsity_threshold: float = 1e-6,
-        blade_dict: Optional[Dict[tuple, str]] = None,
+        blade_dict: dict[tuple, str] | None = None,
     ):
         assert p + q == dim, "p + q must equal dim"
         self.dim = dim
@@ -115,7 +114,7 @@ class GeometricAlgebraEngine:
         # Build metric signature: +1 for continuous, -1 for categorical
         self.metric = np.array([1.0] * p + [-1.0] * q)
 
-        self.blade_dict: Dict[tuple, str] = blade_dict or _DEFAULT_BLADE_DICT
+        self.blade_dict: dict[tuple, str] = blade_dict or _DEFAULT_BLADE_DICT
 
         logger.info(
             "GeometricAlgebraEngine initialised: dim=%d, p=%d, q=%d, max_grade=%d",
@@ -220,7 +219,7 @@ class GeometricAlgebraEngine:
             max_grade=self.max_grade,
         )
 
-        for mv, w in zip(multivectors, weights):
+        for mv, w in zip(multivectors, weights, strict=False):
             scaled = mv * (w / total_w)
             result = result + scaled
 
@@ -266,7 +265,7 @@ class GeometricAlgebraEngine:
             )
             denom = 0.0
 
-            for mv, w in zip(multivectors, weights):
+            for mv, w in zip(multivectors, weights, strict=False):
                 dist = current.euclidean_distance(mv)
                 if dist < 1e-12:
                     continue
@@ -341,7 +340,7 @@ class GeometricAlgebraEngine:
     # ------------------------------------------------------------------
 
     def to_coefficient_vector(
-        self, mv: SparseMultivector, keys: Optional[List[tuple]] = None
+        self, mv: SparseMultivector, keys: list[tuple] | None = None
     ) -> np.ndarray:
         """
         Flatten multivector blade coefficients to a dense numpy array.
