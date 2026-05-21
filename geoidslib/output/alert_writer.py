@@ -28,22 +28,21 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 class BaseWriter(ABC):
+    """Abstract base for alert writers."""
+
     @abstractmethod
-    def write(self, result: AnomalyResult) -> None: ...
+    def write(self, result: AnomalyResult) -> None:
+        """Write a single alert result."""
+        ...
 
     def write_batch(self, results: list[AnomalyResult]) -> None:
+        """Write multiple alerts (default: one by one)."""
         for r in results:
             self.write(r)
 
-    @abstractmethod
-    def close(self) -> None:
-        ...
-
-
-# ---------------------------------------------------------------------------
-# JSON file writer
-# ---------------------------------------------------------------------------
-
+    def close(self) -> None:  # noqa: B027
+        """Flush and close the writer (default no‑op)."""
+        pass
 class JSONFileWriter(BaseWriter):
     """
     Write alerts (and optionally all flow scores) to a NDJSON file.
