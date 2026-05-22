@@ -72,6 +72,7 @@ def bench(name: str, fn, n_runs: int = 3, n_items: int = 10_000):
 
 
 def run_benchmarks():
+    n_flows = 10_000
     N = int(os.getenv("BENCH_N_FLOWS", 10_000))
     if os.getenv("CI"):
       N = min(N, 500)
