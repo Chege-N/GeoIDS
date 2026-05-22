@@ -115,6 +115,9 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     needs: test
+    timeout-minutes: 5
+    env:
+      BENCH_N_FLOWS: 500
     steps:
       - uses: actions/checkout@v4
 

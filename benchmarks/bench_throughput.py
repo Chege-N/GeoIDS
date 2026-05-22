@@ -17,7 +17,7 @@ pytest benchmarks/bench_throughput.py --benchmark-sort=mean
 """
 
 import time
-
+import os
 import numpy as np
 import pytest
 
@@ -72,7 +72,9 @@ def bench(name: str, fn, n_runs: int = 3, n_items: int = 10_000):
 
 
 def run_benchmarks():
-    n_flows = 10_000
+    N = int(os.getenv("BENCH_N_FLOWS", 10_000))
+    if os.getenv("CI"):
+      N = min(N, 500)
     print(f"\n{'='*65}")
     print(f"  GeoIDS Throughput Benchmark  (n_flows={n_flows:,} flows)")
     print(f"{'='*65}")
