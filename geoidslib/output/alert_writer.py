@@ -175,7 +175,7 @@ class SIEMWriter(BaseWriter):
                 headers={
                     "Content-Type": "application/json",
                     "Authorization": (
-                        f"Splunk {self.token}" if self.format == "splunk_hec" 
+                        f"Splunk {self.token}" if self.format == "splunk_hec"
                         else f"Bearer {self.token}",
                      )
                 },
