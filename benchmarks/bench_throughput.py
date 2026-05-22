@@ -14,10 +14,16 @@ Usage
 python benchmarks/bench_throughput.py
   or
 pytest benchmarks/bench_throughput.py --benchmark-sort=mean
+
+Environment
+-----------
+BENCH_N_FLOWS  : number of flows to benchmark (default 10_000; CI sets 500)
+CI             : if set, caps N at 500 to stay well within the 6-minute limit
 """
 
-import time
 import os
+import time
+
 import numpy as np
 import pytest
 
@@ -28,6 +34,14 @@ from geoidslib.features.extractor import FeatureExtractor, FlowRecord
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+def _ci_n(default: int = 10_000) -> int:
+    """Return a flow count that respects CI time limits."""
+    n = int(os.getenv("BENCH_N_FLOWS", default))
+    if os.getenv("CI"):
+        n = min(n, 500)
+    return n
+
 
 def make_flows(n: int, seed: int = 0) -> list[FlowRecord]:
     rng = np.random.default_rng(seed)
@@ -72,10 +86,9 @@ def bench(name: str, fn, n_runs: int = 3, n_items: int = 10_000):
 
 
 def run_benchmarks():
-    n_flows = 10_000
-    N = int(os.getenv("BENCH_N_FLOWS", 10_000))
-    if os.getenv("CI"):
-      N = min(N, 500)
+    # Respect CI cap: BENCH_N_FLOWS env var, max 500 in CI
+    n_flows = _ci_n(default=10_000)
+
     print(f"\n{'='*65}")
     print(f"  GeoIDS Throughput Benchmark  (n_flows={n_flows:,} flows)")
     print(f"{'='*65}")
@@ -116,8 +129,8 @@ def run_benchmarks():
         use_isolation_forest=False,
         target_fpr=0.05,
     )
-    # Warmup
-    for i in range(200):
+    warmup = min(200, n_flows)
+    for i in range(warmup):
         det.process_flow(feat_matrix[i])
     det.force_recompute_reference()
 
@@ -128,25 +141,26 @@ def run_benchmarks():
     )
 
     # --- Batch processing ---
+    batch_n = min(1000, n_flows)
     bench(
-        "AnomalyDetector.process_batch (n_flows=1000)",
-        lambda: det.process_batch(feat_matrix[:1000]),
+        f"AnomalyDetector.process_batch (n_flows={batch_n})",
+        lambda: det.process_batch(feat_matrix[:batch_n]),
         n_runs=5,
-        n_items=1000,
+        n_items=batch_n,
     )
 
     # --- Geometric product ---
-    mv_list = [engine.embed(feat_matrix[i]) for i in range(100)]
+    mv_list = [engine.embed(feat_matrix[i]) for i in range(min(100, n_flows))]
     ref_mv = mv_list[0]
     bench(
         "SparseMultivector.geometric_product",
-        lambda: [mv_list[i % 100].geometric_product(ref_mv) for i in range(n_flows)],
+        lambda: [mv_list[i % len(mv_list)].geometric_product(ref_mv) for i in range(n_flows)],
         n_items=n_flows,
     )
 
     bench(
         "SparseMultivector.commutator",
-        lambda: [mv_list[i % 100].commutator(ref_mv) for i in range(n_flows)],
+        lambda: [mv_list[i % len(mv_list)].commutator(ref_mv) for i in range(n_flows)],
         n_items=n_flows,
     )
 
@@ -179,7 +193,6 @@ def test_bench_process_flow(benchmark, shared_engine):
         reframe_interval=50,
     )
     feat = np.random.default_rng(0).uniform(0, 1, size=25)
-    # Warmup
     for _ in range(50):
         det.process_flow(feat)
     benchmark(lambda: det.process_flow(feat))
