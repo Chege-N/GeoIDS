@@ -117,7 +117,7 @@ jobs:
     needs: test
     timeout-minutes: 5
     env:
-      BENCH_N_FLOWS: 500
+      BENCH_N_FLOWS: 100
     steps:
       - uses: actions/checkout@v4
 

@@ -17,8 +17,8 @@ pytest benchmarks/bench_throughput.py --benchmark-sort=mean
 
 Environment
 -----------
-BENCH_N_FLOWS  : number of flows to benchmark (default 10_000; CI sets 500)
-CI             : if set, caps N at 500 to stay well within the 6-minute limit
+BENCH_N_FLOWS  : number of flows to benchmark (default 10_000; CI forces ≤100)
+CI             : if set, caps N at 100 and skips grade‑3 embedding (avoids timeout)
 """
 
 import os
@@ -39,7 +39,7 @@ def _ci_n(default: int = 10_000) -> int:
     """Return a flow count that respects CI time limits."""
     n = int(os.getenv("BENCH_N_FLOWS", default))
     if os.getenv("CI"):
-        n = min(n, 500)
+        n = min(n, 100)          # ≤100 flows to guarantee <5 min runtime
     return n
 
 
@@ -86,8 +86,9 @@ def bench(name: str, fn, n_runs: int = 3, n_items: int = 10_000):
 
 
 def run_benchmarks():
-    # Respect CI cap: BENCH_N_FLOWS env var, max 500 in CI
+    # Respect CI cap: BENCH_N_FLOWS env var, max 100 in CI
     n_flows = _ci_n(default=10_000)
+    in_ci = os.getenv("CI", "") != ""
 
     print(f"\n{'='*65}")
     print(f"  GeoIDS Throughput Benchmark  (n_flows={n_flows:,} flows)")
@@ -114,12 +115,16 @@ def run_benchmarks():
         n_items=n_flows,
     )
 
-    engine3 = GeometricAlgebraEngine(dim=25, p=15, q=10, max_grade=3)
-    bench(
-        "GAEngine.embed (grade ≤ 3)",
-        lambda: [engine3.embed(feat_matrix[i]) for i in range(n_flows)],
-        n_items=n_flows,
-    )
+    # Grade‑3 embedding is extremely expensive in pure Python – skip in CI
+    if not in_ci:
+        engine3 = GeometricAlgebraEngine(dim=25, p=15, q=10, max_grade=3)
+        bench(
+            "GAEngine.embed (grade ≤ 3)",
+            lambda: [engine3.embed(feat_matrix[i]) for i in range(n_flows)],
+            n_items=n_flows,
+        )
+    else:
+        print("  (skipping grade‑3 embedding in CI to avoid timeout)")
 
     # --- Anomaly scoring ---
     det = AnomalyDetector(
