@@ -209,7 +209,7 @@ class PcapIngester(BaseIngester):
             self._total_flows += 1
 
         logger.info(
-            "PCAP ingestion complete: %d packets, %d flows", 
+            "PCAP ingestion complete: %d packets, %d flows",
             packets_read, self._total_flows
         )
 
