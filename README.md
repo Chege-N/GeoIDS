@@ -91,13 +91,13 @@ geoIDS dashboard --port 8050
 
 ## Validation
 
-| Dataset | Detection Rate | FPR | F1-Score |
-|---|---|---|---|
-| CIC-IDS2017 (zero-day split) | 89.3 % | 0.7 % | 0.891 |
-| CSE-CIC-IDS2018 | 87.1 % | 0.9 % | 0.872 |
-| UNSW-NB15 | 91.2 % | 0.6 % | 0.908 |
+A demonstration script (`scripts/demo.py`) generates synthetic encrypted traffic with
+five attack categories, including a zero‑day DoH‑based backdoor. On this synthetic
+benchmark, GeoIDS achieves detection rates above 85% at false positive rates below 1%.
 
-GeoIDS outperforms LSTM-AD and Autoencoder baselines by **≥ 10 F1 points** on zero-day splits.
+Full evaluation on public datasets (CIC‑IDS2017, CSE‑CIC‑IDS2018, UNSW‑NB15) is in
+progress. The evaluation protocol and expected results are documented in
+[docs/evaluation.md](docs/evaluation.md).
 
 ---
 
